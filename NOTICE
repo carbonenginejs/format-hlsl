@@ -1,0 +1,18 @@
+carbonenginejs/reader-hlsl
+==========================
+
+A pure-JavaScript reader for CCP's Tr2 compiled effect container format
+(`.sm_hi` / `.sm_lo` / `.sm_depth` bodies): the permutation axes, technique
+and pass tables, and per-stage constant/resource/sampler metadata that make
+up one compiled Carbon/Trinity effect resource.
+
+Contains no CCP code. The container layout was recovered through clean-room
+analysis of compiled effect files and is described here in the reader's own
+words; no CCP source, tooling, or proprietary documentation is included in
+this repository. Shader bytecode bodies are kept as opaque bytes
+(`CjsShaderBytecode`) — this package does not decode DXBC/HLSL bytecode.
+
+CarbonEngineJS-facing code is copyright cppctamber / CarbonEngineJS
+contributors.
+
+Repository license: MIT. See LICENSE.

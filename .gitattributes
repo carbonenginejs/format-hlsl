@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.sm_hi binary
+*.sm_lo binary
+*.sm_depth binary
