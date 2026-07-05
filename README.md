@@ -13,6 +13,15 @@ bytecode bodies stay as opaque bytes; decoding DXBC/HLSL bytecode itself is
 `@carbonenginejs/reader-dxbc`'s job, not this package's — `@carbonenginejs/reader-hlsl` has zero dependency
 on it.
 
+## Package
+
+- npm: <https://www.npmjs.com/package/@carbonenginejs/reader-hlsl>
+- package: `@carbonenginejs/reader-hlsl`
+- version: `0.1.0`
+- license: `MIT`
+- runtime: Node `>=18`, modern browsers
+- module: ESM, package root exports `CjsHlslReader`
+
 ## Install
 
 ```sh
