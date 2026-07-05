@@ -9,10 +9,8 @@ node_modules/
 .skill/
 .skills/
 
-# local corpus configuration and downloaded oracle data (never commit game assets)
+# External corpus assets (only supplied through HLSL_CORPUS_DIR; never commit game assets)
 /.cache/
-corpus.local.json
-/test/fixtures/local/
 *.sm_hi
 *.sm_lo
 *.sm_depth

@@ -13,6 +13,10 @@ bytecode bodies stay as opaque bytes; decoding DXBC/HLSL bytecode itself is
 `@carbonenginejs/reader-dxbc`'s job, not this package's — `@carbonenginejs/reader-hlsl` has zero dependency
 on it.
 
+CarbonEngine and Fenris Creations (CCP Games) are named in this package because
+the Tr2 container shape was reverse-engineered for Carbon/Trinity effect
+interoperability. This package is not affiliated with or endorsed by CCP Games.
+
 ## Package
 
 - npm: <https://www.npmjs.com/package/@carbonenginejs/reader-hlsl>
@@ -173,13 +177,12 @@ npm test
 Baseline tests are fully self-contained (synthetic effect bytes assembled
 in-test, plus binary-reader unit tests) — no game assets, network access or
 fixtures required. An optional corpus sweep parses every `.sm_hi` file found
-under a local directory of compiled effects:
+under the directory supplied by `HLSL_CORPUS_DIR`:
 
 ```sh
 HLSL_CORPUS_DIR=path/to/effect.dx11 npm test
 ```
 
-or via a gitignored `corpus.local.json`: `{ "corpusDir": "path/to/effect.dx11" }`.
 Last full sweep: 537 `.sm_hi` files, 593 permutation axes, 949 techniques
 decoded, zero failures.
 
@@ -187,8 +190,8 @@ decoded, zero failures.
 
 MIT (see `LICENSE` and `NOTICE`).
 
-This package contains no CarbonEngine or Fenris Creations/CCP code. Its Tr2
-container layout and data-shape model were reverse-engineered from compiled
+This package contains no CarbonEngine or Fenris Creations (CCP Games) code. Its
+Tr2 container layout and data-shape model were reverse-engineered from compiled
 effect files, historical GLES shader assets, and observed CarbonEngine
 source-code structure. Those sources informed field names and layout
 hypotheses; the implementation is original CarbonEngineJS code.

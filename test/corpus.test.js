@@ -1,38 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir, stat } from "node:fs/promises";
-import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { CjsHlslReader } from "../src/index.js";
 
 /**
  * Optional corpus sweep: parses every `.sm_hi` compiled effect file found
- * under a local directory of EVE Online effect assets. Not part of the
- * baseline checks; game assets are never committed (org rule). Enable with:
+ * under the directory supplied by HLSL_CORPUS_DIR. Not part of the baseline
+ * checks; game assets are never committed (org rule). Enable with:
  *   HLSL_CORPUS_DIR=path/to/effect.dx11 npm test
- * or a gitignored corpus.local.json: { "corpusDir": "path/to/effect.dx11" }
  */
-
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function resolveCorpusDir()
 {
-    if (process.env.HLSL_CORPUS_DIR) return process.env.HLSL_CORPUS_DIR;
-    const local = path.join(projectRoot, "corpus.local.json");
-    if (existsSync(local))
-    {
-        try
-        {
-            return JSON.parse(readFileSync(local, "utf8")).corpusDir || null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-    return null;
+    return process.env.HLSL_CORPUS_DIR || null;
 }
 
 async function* walk(dir)
@@ -49,7 +31,7 @@ const corpusDir = resolveCorpusDir();
 
 test(
     "corpus sweep parses every .sm_hi effect container",
-    { skip: corpusDir ? false : "set HLSL_CORPUS_DIR or corpus.local.json { corpusDir } to run the corpus sweep" },
+    { skip: corpusDir ? false : "set HLSL_CORPUS_DIR to run the corpus sweep" },
     async () =>
     {
         assert.ok((await stat(corpusDir)).isDirectory(), `corpus dir not found: ${corpusDir}`);
