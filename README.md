@@ -21,7 +21,7 @@ interoperability. This package is not affiliated with or endorsed by CCP Games.
 
 - npm: <https://www.npmjs.com/package/@carbonenginejs/format-hlsl>
 - package: `@carbonenginejs/format-hlsl`
-- version: `0.1.0`
+- version: `0.1.1`
 - license: `MIT`
 - runtime: Node `>=18`, modern browsers
 - module: ESM, package root exports `CjsFormatHlsl`
@@ -48,7 +48,7 @@ should depend on.
 import CjsFormatHlsl from "@carbonenginejs/format-hlsl";
 
 const reader = new CjsFormatHlsl({
-    emit: "json",              // "json" (default) | "raw"
+    emit: "json",              // "json" (default) | "metadata" | "raw"
     source: "myeffect.sm_hi",  // name used in error details
     permutation: null,         // null/default | Map | [{ name, value }]
     classes: {
@@ -67,10 +67,12 @@ const reader = new CjsFormatHlsl({
 
 const json = reader.Read(bytes);
 const summary = reader.Inspect(bytes);
+const metadata = reader.Read(bytes, { emit: "metadata" });
 const text = JSON.stringify(reader.ToJSON(json));
 
 CjsFormatHlsl.isSupported(bytes);             // cheap header-only load check
 CjsFormatHlsl.read(bytes, { emit: "raw" });   // internal Tr2EffectRes graph (unstable)
+CjsFormatHlsl.read(bytes, { emit: "metadata" }); // metadata-only JSON, no bytecode
 await CjsFormatHlsl.readFile("effect.sm_hi"); // Node-only convenience, same emit rules
 ```
 
@@ -90,8 +92,12 @@ import { CjsFormatHlsl } from "@carbonenginejs/format-hlsl";
 - `src/CjsFormatHlsl.js` is the public format boundary. Parser machinery lives
   under `src/core`; transient CarbonEngine/library-shaped helpers live under
   `src/carbon` until they move to standalone core packages.
-- `Read` / static `read` return JSON by default. `emit: "raw"` exposes the
-  internal `Tr2EffectRes` graph for advanced callers and is not a stable schema.
+- `Read` / static `read` return JSON by default. `emit: "metadata"` returns
+  shader inspection JSON for one resolved permutation: options, techniques,
+  passes, stage constants, resources, UAVs, samplers, pass render states and
+  signatures, without bytecode, constant value bytes or runtime handles.
+- `emit: "raw"` exposes the internal `Tr2EffectRes` graph for advanced callers
+  and is not a stable schema.
 - `ToJSON` / static `toJSON` converts format output to JSON-compatible data. It
   does not decode embedded shader bytecode and is not a writer.
 - Shared schema, registries, hydration utilities, and decorators belong in the
@@ -136,6 +142,66 @@ into other packages.
 A cheaper alternative to a full `Read`: header facts plus the resolved
 permutation's technique names, pass counts and per-pass active-stage counts,
 without building the full JSON graph.
+
+### `emit: "metadata"`
+
+The shader endpoint shape: plain JSON for inspection and downstream pipeline
+planning, not Trinity runtime classes. Pass render states are retained as
+Carbon/D3D numeric key/value pairs with readable names added.
+
+```
+MetadataRoot
+├─ version, compilerVersion, sourcePath, bodyCount, loadError
+├─ permutations: Permutation[]        // axes and default values
+├─ bodyIndex                          // compiled body selected by the options
+├─ selectedOptions: Option[]          // default/local/global option choice per axis
+└─ effect: MetadataEffect | null      // null when the selected body cannot decode
+   └─ techniques: Technique[]
+      └─ passes: Pass[]
+         ├─ renderStates: RenderState[]
+         └─ stageInputs: (StageInput | null)[]
+            ├─ constantValueSize
+            ├─ constants: Constant[]  // name, offset, size, type, dimension, elements
+            ├─ resources / uavs: Resource[]
+            ├─ samplers: Sampler[]
+            ├─ annotations
+            └─ signature: { pipelineInputs, registers, samplers, threadGroupSize }
+```
+
+`RenderState` keeps the original numeric `key` and `value`, then adds fields
+such as `name`, `valueName`, `valueFloat`, `valueHex`, or `valueFlags` when
+the state type is known.
+
+Pick a non-default permutation with the same `permutation` option used by
+`Read`:
+
+```js
+const metadata = CjsFormatHlsl.read(bytes, {
+    emit: "metadata",
+    permutation: [
+        { name: "BLEND_MODE", value: "TRANSPARENT" }
+    ]
+});
+```
+
+## CLI
+
+The package also installs a small Node CLI:
+
+```sh
+format-hlsl metadata path/to/effect.fx11
+format-hlsl metadata path/to/effect.fx11 path/to/effect.json
+```
+
+From this repo/package, the same command is available through npm:
+
+```sh
+npm run metadata -- path/to/effect.fx11
+npm run metadata -- path/to/effect.fx11 path/to/effect.json
+```
+
+When the output path is omitted, the CLI writes `<input-name>.json` in the
+current working directory.
 
 ## Class hydration (`classes` option)
 

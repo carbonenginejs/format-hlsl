@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { CjsFormatHlsl } from "../src/index.js";
+import { emitEffectMetadata } from "../src/core/metadata.js";
 import { buildEffectBytes } from "./synthetic.js";
 
 test("static read and instance Read share one code path", () =>
@@ -62,12 +63,167 @@ test("Inspect summarizes the default permutation without a full JSON conversion"
     assert.equal(summary.effectName, null);
 });
 
+test("metadata emit reports selected permutation options without shader bytecode", () =>
+{
+    const bytes = buildEffectBytes({
+        permutations: [
+            {
+                name: "BLEND_MODE",
+                description: "Blend mode selector",
+                defaultOption: 1,
+                options: [ "OPAQUE", "TRANSPARENT" ]
+            },
+            {
+                name: "QUALITY",
+                description: "Quality selector",
+                defaultOption: 0,
+                options: [ "LOW", "HIGH" ]
+            }
+        ],
+        bodies: [ { size: 0 }, { size: 0 }, { size: 0 }, { size: 0 } ]
+    });
+
+    const defaults = CjsFormatHlsl.read(bytes, {
+        emit: CjsFormatHlsl.OUTPUT_METADATA,
+        source: "synthetic"
+    });
+    assert.equal(defaults.bodyCount, 4);
+    assert.equal(defaults.bodyIndex, 1);
+    assert.deepEqual(defaults.selectedOptions.map((entry) => [ entry.name, entry.value, entry.source ]), [
+        [ "BLEND_MODE", "TRANSPARENT", "default" ],
+        [ "QUALITY", "LOW", "default" ]
+    ]);
+    assert.equal(defaults.effect, null);
+
+    const selected = new CjsFormatHlsl({
+        emit: CjsFormatHlsl.OUTPUT_METADATA,
+        source: "synthetic"
+    }).Read(bytes, {
+        permutation: new Map([
+            [ "BLEND_MODE", "OPAQUE" ],
+            [ "QUALITY", "HIGH" ]
+        ])
+    });
+    assert.equal(selected.bodyIndex, 2);
+    assert.deepEqual(selected.selectedOptions.map((entry) => [ entry.name, entry.value, entry.source ]), [
+        [ "BLEND_MODE", "OPAQUE", "local" ],
+        [ "QUALITY", "HIGH", "local" ]
+    ]);
+});
+
+test("metadata projection includes shader bindings and omits runtime-heavy fields", () =>
+{
+    const stageInput = {
+        m_exists: true,
+        m_constantValueSize: 64,
+        constants: [ {
+            name: "WorldViewProjection",
+            offset: 0,
+            size: 64,
+            type: 0,
+            dimension: 4,
+            elements: 1,
+            isSRGB: false,
+            isAutoregister: true
+        } ],
+        resources: new Map([ [ 0, {
+            name: "DiffuseMap",
+            type: 2,
+            arrayElements: 1,
+            isSRGB: true,
+            isAutoregister: false
+        } ] ]),
+        samplers: new Map([ [ 0, {
+            name: "LinearSampler",
+            sampler: {
+                isDynamic: true,
+                comparison: false,
+                minFilter: 1,
+                magFilter: 1,
+                mipFilter: 1,
+                addressU: 1,
+                addressV: 1,
+                addressW: 1,
+                mipLODBias: 0,
+                maxAnisotropy: 0,
+                comparisonFunc: 0,
+                borderColor: [ 0, 0, 0, 0 ],
+                minLOD: 0,
+                maxLOD: 0
+            }
+        } ] ]),
+        uavs: new Map(),
+        annotation: [],
+        signature: {
+            pipelineInputs: [ { usage: "POSITION", registerIndex: 0 } ],
+            registers: [ { name: "$LocalConstants", registerIndex: 0 } ],
+            samplers: [ { name: "LinearSampler", registerIndex: 0 } ],
+            threadGroupSize: { x: 1, y: 1, z: 1 }
+        },
+        constantValues: new Uint8Array([ 1, 2, 3, 4 ]),
+        cjsShaderBytecode: { bytes: new Uint8Array([ 5, 6, 7, 8 ]) }
+    };
+
+    const result = emitEffectMetadata(
+        {
+            m_version: 8,
+            m_compilerVersion: null,
+            sourcePath: "fixture.sm_hi",
+            m_offsetCount: 1,
+            m_permutations: [],
+            loadError: null
+        },
+        {
+            GetEffectDescription: () => ({
+                version: 8,
+                effectName: "fixture",
+                techniques: [ {
+                    name: "Main",
+                    shaderTypeMask: 1,
+                    passes: [ {
+                        shaderTypeMask: 1,
+                        cjsRenderStateSetup: {
+                            entries: [
+                                { key: 22, value: 3 },
+                                { key: 168, value: 0 },
+                                { key: 175, value: 1065353216 }
+                            ]
+                        },
+                        stageInputs: [ stageInput ],
+                        renderStates: 123
+                    } ],
+                    libraries: []
+                } ],
+                annotations: new Map(),
+                readError: null
+            })
+        },
+        { bodyIndex: 0, selectedOptions: [] }
+    );
+
+    const pass = result.effect.techniques[0].passes[0];
+    const stage = pass.stageInputs[0];
+    assert.deepEqual(pass.renderStates, [
+        { key: 22, name: "RS_CULLMODE", value: 3, valueName: "CULL_CCW" },
+        { key: 168, name: "RS_COLORWRITEENABLE", value: 0, valueName: "NONE", valueFlags: [] },
+        { key: 175, name: "RS_SLOPESCALEDEPTHBIAS", value: 1065353216, valueFloat: 1 }
+    ]);
+    assert.equal(stage.bytecode, undefined);
+    assert.equal(stage.constantValues, undefined);
+    assert.equal(stage.constants[0].name, "WorldViewProjection");
+    assert.equal(stage.resources[0].name, "DiffuseMap");
+    assert.equal(stage.samplers[0].name, "LinearSampler");
+    assert.deepEqual(stage.signature.pipelineInputs, [ { usage: "POSITION", registerIndex: 0 } ]);
+    assert.equal(typeof JSON.stringify(result), "string");
+});
+
 test("profiles hold values and reject invalid emits", () =>
 {
     const reader = new CjsFormatHlsl({ emit: CjsFormatHlsl.OUTPUT_RAW, source: "profile" });
     assert.equal(reader.GetValues().emit, CjsFormatHlsl.OUTPUT_RAW);
     assert.equal(reader.GetValues({ source: "override" }).source, "override");
     assert.equal(reader.GetValues().source, "profile");
+    assert.equal(new CjsFormatHlsl({ emit: CjsFormatHlsl.OUTPUT_METADATA }).GetValues().emit, "metadata");
     assert.throws(() => new CjsFormatHlsl({ emit: "nonsense" }), /emit must be/);
     assert.throws(() => CjsFormatHlsl.read(buildEffectBytes(), { emit: "nonsense" }), /emit must be/);
 });

@@ -4,7 +4,7 @@
  * Keep this file small and reviewable: the Tr2 effect graph parser lives
  * under src/core/tr2 (internal parsing machinery, not part of this
  * package's public surface); input/option normalization, the shared read
- * path, and the JSON emitter live under src/core.
+ * path, and the JSON emitters live under src/core.
  */
 
 import { Tr2EffectRes } from "./core/tr2/resources/Tr2EffectRes.js";
@@ -12,6 +12,7 @@ import {
     CLASS_KEYS,
     DEFAULT_VALUES,
     OUTPUT_JSON,
+    OUTPUT_METADATA,
     OUTPUT_RAW,
     inspectWithValues,
     normalizeValues,
@@ -153,7 +154,7 @@ export class CjsFormatHlsl
      *
      * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect container bytes.
      * @param {object} [options] Per-call value overrides.
-     * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, or the documented JSON graph when emit is "json".
+     * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, compact metadata, or the documented JSON graph.
      */
     Read(input, options = {})
     {
@@ -212,7 +213,7 @@ export class CjsFormatHlsl
      *
      * @param {Uint8Array|ArrayBuffer|Buffer|DataView} input Tr2 effect container bytes.
      * @param {object} [options] Format values.
-     * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, or the documented JSON graph when emit is "json".
+     * @returns {Tr2EffectRes|object} The raw Tr2EffectRes instance, compact metadata, or the documented JSON graph.
      */
     static read(input, options = {})
     {
@@ -247,7 +248,7 @@ export class CjsFormatHlsl
      *
      * @param {string} path Path to a compiled Carbon effect file (`.sm_hi` etc.).
      * @param {object} [options] Format values.
-     * @returns {Promise<Tr2EffectRes|object>} The raw Tr2EffectRes instance, or the documented JSON graph when emit is "json".
+     * @returns {Promise<Tr2EffectRes|object>} The raw Tr2EffectRes instance, compact metadata, or the documented JSON graph.
      */
     static async readFile(path, options = {})
     {
@@ -263,6 +264,7 @@ export class CjsFormatHlsl
     }
 
     static OUTPUT_JSON = OUTPUT_JSON;
+    static OUTPUT_METADATA = OUTPUT_METADATA;
     static OUTPUT_RAW = OUTPUT_RAW;
     static CLASS_KEYS = CLASS_KEYS;
 

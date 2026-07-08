@@ -11,11 +11,16 @@
  */
 
 import { CjsEffectReadError } from "../carbon/cjs/CjsEffectReadError.js";
+import {
+    emitEffectMetadata,
+    resolveSelectedOptions
+} from "./metadata.js";
 import { Tr2EffectRes } from "./tr2/resources/Tr2EffectRes.js";
 import { CLASS_KEYS, emitEffectJson } from "./json.js";
 
 export const OUTPUT_JSON = "json";
 export const OUTPUT_RAW = "raw";
+export const OUTPUT_METADATA = "metadata";
 
 export const DEFAULT_VALUES = Object.freeze({
     emit: OUTPUT_JSON,
@@ -24,7 +29,7 @@ export const DEFAULT_VALUES = Object.freeze({
     classes: Object.freeze({})
 });
 
-const VALID_EMITS = new Set([ OUTPUT_JSON, OUTPUT_RAW ]);
+const VALID_EMITS = new Set([ OUTPUT_JSON, OUTPUT_RAW, OUTPUT_METADATA ]);
 const OPTION_KEYS = new Set([ "emit", "source", "permutation", "classes" ]);
 
 /**
@@ -112,7 +117,7 @@ export function normalizeValues(base, options = {}, readerName = "CjsFormatHlsl"
 
     if (!VALID_EMITS.has(values.emit))
     {
-        throw new TypeError(`${readerName}: emit must be "${OUTPUT_JSON}" or "${OUTPUT_RAW}", got ${JSON.stringify(values.emit)}`);
+        throw new TypeError(`${readerName}: emit must be one of ${Array.from(VALID_EMITS, (emit) => JSON.stringify(emit)).join(", ")}, got ${JSON.stringify(values.emit)}`);
     }
     if (typeof values.source !== "string" || !values.source)
     {
@@ -212,6 +217,12 @@ export function readWithValues(input, values)
     if (values.emit === OUTPUT_RAW) return effect;
 
     const shader = resolveShader(effect, values);
+    if (values.emit === OUTPUT_METADATA)
+    {
+        const selection = resolveSelectedOptions(effect, values.permutation || []);
+        return emitEffectMetadata(effect, shader, selection);
+    }
+
     return emitEffectJson(effect, shader, { classes: values.classes });
 }
 

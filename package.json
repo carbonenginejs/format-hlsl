@@ -4,6 +4,9 @@
   "description": "CarbonEngineJS Tr2 effect container format package. Parses CCP's compiled effect files (permutation axes, techniques, passes and shader stage metadata) and emits JSON or raw graph objects for shader translation backends.",
   "type": "module",
   "main": "src/index.js",
+  "bin": {
+    "format-hlsl": "./bin/format-hlsl.js"
+  },
   "exports": {
     ".": "./src/index.js"
   },
@@ -12,8 +15,9 @@
   },
   "scripts": {
     "test": "node --test",
-    "lint": "eslint --ext .js,.mjs src test",
-    "lint:fix": "eslint --fix --ext .js,.mjs src test"
+    "metadata": "node ./bin/format-hlsl.js metadata",
+    "lint": "eslint --ext .js,.mjs src test bin",
+    "lint:fix": "eslint --fix --ext .js,.mjs src test bin"
   },
   "keywords": [
     "carbonenginejs",
@@ -30,6 +34,7 @@
     "eslint": "^8.57.0"
   },
   "files": [
+    "bin",
     "src",
     "README.md",
     "LICENSE",
