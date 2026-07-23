@@ -18,3 +18,4 @@ carbonenginejs.md
 *.sm_hi
 *.sm_lo
 *.sm_depth
+/DECORATOR-TODOS.md
