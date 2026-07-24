@@ -33,13 +33,14 @@ const FORMAT_NAME = "CjsFormatHlsl";
  * This format profile has no dependency on any DXBC/shader-bytecode decoder: shader
  * bodies stay as opaque bytes in the emitted graph. The public contract is
  * plain JSON data (`emit: "json"`, the default) — the documented effect
- * graph shape described in the README. `emit: "raw"` exposes the internal
+ * graph shape described in `docs/reference/json-graph.md`. `emit: "raw"`
+ * exposes the internal
  * Tr2EffectRes graph directly; treat it as unstable, not schema-guaranteed
  * internals, useful mainly for resolving multiple permutations by hand.
  *
  * The `classes` option lets a caller register constructors for specific
  * node kinds in the emitted JSON graph (see `CjsFormatHlsl.CLASS_KEYS`);
- * this package itself exports no model classes.
+ * class registration does not depend on importing internal graph classes.
  */
 export class CjsFormatHlsl
 {

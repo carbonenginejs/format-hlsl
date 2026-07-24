@@ -1,7 +1,7 @@
 {
   "name": "@carbonenginejs/format-hlsl",
-  "version": "0.1.2",
-  "description": "CarbonEngineJS Tr2 effect container format package. Parses CCP's compiled effect files (permutation axes, techniques, passes and shader stage metadata) and emits JSON or raw graph objects for shader translation backends.",
+  "version": "0.1.3",
+  "description": "Pure-JavaScript reader for Carbon/Trinity compiled effect containers.",
   "type": "module",
   "main": "src/index.js",
   "bin": {
@@ -36,6 +36,7 @@
   "files": [
     "bin",
     "src",
+    "docs",
     "README.md",
     "LICENSE",
     "NOTICE"

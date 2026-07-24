@@ -1,23 +1,14 @@
-# src/carbon
+# Package-local Carbon compatibility models
 
-This folder is a temporary home for CarbonEngine/library-shaped classes that
-are needed by this format or tooling package before their proper standalone
-library exists.
+This directory contains the binary utilities and Carbon-shaped records used
+inside `@carbonenginejs/format-hlsl`.
 
-When classes here mirror, reference, or are derived from CarbonEngine or Fenris
-Creations (CCP Games) behavior, formats, source structure, tools, assets, or
-shader conventions, record that provenance in the package README/NOTICE before
-shipping the change. Do not imply affiliation with or endorsement by CCP Games.
+These classes support the compiled effect reader. They are not independent
+package entry points, and direct imports from this directory are not a stable
+public API. The supported package boundary is `CjsFormatHlsl`; explicitly
+exported advanced helpers are documented under `docs/reference`.
 
-Classes here are transient:
-
-- They are not the format boundary API.
-- Keep the public format class in `src/CjsFormat*.js`.
-- Keep parser, codec, conversion, and validation helpers in `src/core`.
-- Move these classes into the correct standalone library package when that
-  package exists.
-- Preserve provenance, legal notices, schema mappings, and migration notes when
-  moving them.
-
-Do not treat imports from this folder as stable public API unless the package
-README explicitly says otherwise.
+Names and shapes that mirror Carbon/Trinity concepts preserve their
+interoperability provenance. The implementations are original
+CarbonEngineJS code and do not imply affiliation with or endorsement by CCP
+Games.
