@@ -1,8 +1,10 @@
 import { readRaw } from "./helpers.js";
+import { CjsEffectStateManager } from "../carbon/cjs/CjsEffectStateManager.js";
 import {
     Tr2RenderContextEnum,
     tr2ShaderStageName
 } from "./tr2/Tr2RenderContextEnum.js";
+import { Tr2Shader } from "./tr2/shader/Tr2Shader.js";
 
 export const EFFECT_BODY_REFLECTION_FORMAT = "CJS_EFFECT_BODY_REFLECTION";
 export const EFFECT_BODY_REFLECTION_VERSION = 1;
@@ -11,6 +13,7 @@ const PORTABLE_EFFECT_VERSION = 15;
 const UINT8_MAX = 0xff;
 const UINT32_MAX = 0xffffffff;
 const CONSTANT_BYTES_MAX = 4096;
+const EFFECT_BODY_COUNT_MAX = 0x10000;
 
 /**
  * Reads one exact permutation-table body into the versioned portable reflection
@@ -66,15 +69,13 @@ export function buildEffectBodyReflection(effectRes, permutationIndex)
             `Portable effect reflection requires source effect version ${PORTABLE_EFFECT_VERSION}`
         );
     }
-    const sourceRecord = effectRes.m_offsets?.[permutationIndex];
-    if (!sourceRecord || sourceRecord.index !== permutationIndex)
-    {
-        throw new Error(
-            `Portable effect reflection body index ${permutationIndex} disagrees with its source record`
-        );
-    }
+    const sourceRecord = normalizeBodySourceRecord(
+        effectRes.m_offsets?.[permutationIndex],
+        permutationIndex,
+        effectRes.m_data?.byteLength
+    );
 
-    const shader = effectRes.GetShaderByIndex(permutationIndex);
+    const shader = decodeEffectBodyFresh(effectRes, sourceRecord);
     const description = shader?.GetEffectDescription?.();
     if (!description || description.readError)
     {
@@ -104,13 +105,95 @@ export function buildEffectBodyReflection(effectRes, permutationIndex)
         permutationIndex,
         sourceRecord: {
             offset: sourceRecord.offset,
-            byteLength: sourceRecord.size
+            byteLength: sourceRecord.byteLength
         },
         effect: emitEffect(description)
     };
 
     validateEffectBodyReflection(document);
     return document;
+}
+
+/**
+ * Enumerates first-occurrence-ordered groups of byte-identical effect bodies.
+ *
+ * This inspects owned source bytes without decoding bodies or touching parser
+ * caches. Distinct source ranges with identical bytes are grouped together.
+ *
+ * @param {object} effectRes Loaded raw version-15 Tr2EffectRes graph.
+ * @returns {object[]} Frozen unique-body inventory with every permutation alias.
+ */
+export function enumerateUniqueEffectBodies(effectRes)
+{
+    if (!effectRes || typeof effectRes !== "object"
+        || effectRes.m_version !== PORTABLE_EFFECT_VERSION
+        || !(effectRes.m_data instanceof Uint8Array)
+        || !Array.isArray(effectRes.m_offsets)
+        || effectRes.m_offsetCount !== effectRes.m_offsets.length
+        || !effectRes.m_offsets.length)
+    {
+        throw new TypeError(
+            "Portable effect body inventory requires a loaded version-15 Tr2EffectRes"
+        );
+    }
+    if (effectRes.m_offsets.length > EFFECT_BODY_COUNT_MAX)
+    {
+        throw new RangeError(
+            `Portable effect body inventory exceeds ${EFFECT_BODY_COUNT_MAX} records`
+        );
+    }
+
+    const sourceRecords = effectRes.m_offsets.map((record, permutationIndex) =>
+        normalizeBodySourceRecord(
+            record,
+            permutationIndex,
+            effectRes.m_data.byteLength
+        ));
+    validateDisjointBodySourceRecords(sourceRecords);
+
+    const groups = [];
+    const groupByRange = new Map();
+    const groupsByFingerprint = new Map();
+    for (const [ permutationIndex, sourceRecord ] of sourceRecords.entries())
+    {
+        const rangeKey = `${sourceRecord.offset}:${sourceRecord.byteLength}`;
+        let group = groupByRange.get(rangeKey);
+        if (!group)
+        {
+            const bytes = effectRes.m_data.subarray(
+                sourceRecord.offset,
+                sourceRecord.offset + sourceRecord.byteLength
+            );
+            const fingerprint = fingerprintBytes(bytes);
+            const candidates = groupsByFingerprint.get(fingerprint) ?? [];
+            group = candidates.find((candidate) =>
+                bytesEqual(candidate.bytes, bytes));
+            if (!group)
+            {
+                group = {
+                    bytes,
+                    permutationIndex,
+                    sourceRecord,
+                    variants: []
+                };
+                candidates.push(group);
+                groupsByFingerprint.set(fingerprint, candidates);
+                groups.push(group);
+            }
+            groupByRange.set(rangeKey, group);
+        }
+        group.variants.push({
+            permutationIndex,
+            sourceRecord
+        });
+    }
+
+    return Object.freeze(groups.map((group) => Object.freeze({
+        permutationIndex: group.permutationIndex,
+        sourceRecord: group.sourceRecord,
+        variants: Object.freeze(group.variants.map((variant) =>
+            Object.freeze(variant)))
+    })));
 }
 
 /**
@@ -1218,6 +1301,93 @@ function copyBytes(value)
         ));
     }
     throw new TypeError("Portable reflection bytes must be a byte view");
+}
+
+function decodeEffectBodyFresh(effectRes, sourceRecord)
+{
+    const shader = new Tr2Shader();
+    const buffer = effectRes.m_data.subarray(
+        sourceRecord.offset,
+        sourceRecord.offset + sourceRecord.byteLength
+    );
+    const ok = shader.GetEffect().Read(
+        buffer,
+        sourceRecord.byteLength,
+        effectRes.m_version,
+        effectRes.m_stringTable,
+        effectRes.m_stringTableSize,
+        effectRes.sourcePath,
+        { effectStateManager: new CjsEffectStateManager() }
+    );
+    if (ok) shader.ProcessEffect();
+    return shader;
+}
+
+function normalizeBodySourceRecord(
+    record,
+    permutationIndex,
+    sourceByteLength
+)
+{
+    const end = record?.offset + record?.size;
+    if (!record || record.index !== permutationIndex
+        || !Number.isSafeInteger(record.offset) || record.offset < 0
+        || record.offset > UINT32_MAX
+        || !Number.isSafeInteger(record.size) || record.size < 1
+        || record.size > UINT32_MAX
+        || !Number.isSafeInteger(end)
+        || record.end !== end
+        || !Number.isSafeInteger(sourceByteLength)
+        || end > sourceByteLength)
+    {
+        throw new Error(
+            `Portable effect reflection body index ${permutationIndex} `
+            + "disagrees with its source record"
+        );
+    }
+    return Object.freeze({
+        offset: record.offset,
+        byteLength: record.size
+    });
+}
+
+function validateDisjointBodySourceRecords(sourceRecords)
+{
+    const unique = new Map();
+    for (const record of sourceRecords)
+    {
+        const key = `${record.offset}:${record.byteLength}`;
+        if (!unique.has(key)) unique.set(key, record);
+    }
+    const ordered = Array.from(unique.values()).sort((left, right) =>
+        left.offset - right.offset || left.byteLength - right.byteLength);
+    for (let index = 1; index < ordered.length; index += 1)
+    {
+        const previous = ordered[index - 1];
+        const current = ordered[index];
+        if (current.offset < previous.offset + previous.byteLength)
+        {
+            throw new Error(
+                "Portable effect reflection body source records partially overlap"
+            );
+        }
+    }
+}
+
+function fingerprintBytes(bytes)
+{
+    let hash = 0x811c9dc5;
+    for (const value of bytes)
+    {
+        hash = Math.imul(hash ^ value, 0x01000193) >>> 0;
+    }
+    return `${bytes.byteLength}:${hash.toString(16).padStart(8, "0")}`;
+}
+
+function bytesEqual(left, right)
+{
+    return left.byteLength === right.byteLength
+        && left.every((value, index) => value === right[index]);
 }
 
 function assertUint8(value, context)

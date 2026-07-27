@@ -17,6 +17,7 @@ The portable subpath supplies that boundary:
 ```js
 import {
     buildEffectBodyReflection,
+    enumerateUniqueEffectBodies,
     readEffectBodyReflection,
     validateEffectBodyReflection
 } from "@carbonenginejs/format-hlsl/portable";
@@ -27,11 +28,23 @@ const document = readEffectBodyReflection(bytes, {
 });
 
 validateEffectBodyReflection(document);
+
+const groups = enumerateUniqueEffectBodies(effectRes);
+const uniqueReflections = groups.map((group) =>
+    buildEffectBodyReflection(effectRes, group.permutationIndex));
 ```
 
 `buildEffectBodyReflection(effectRes, permutationIndex)` accepts an already
 loaded raw `Tr2EffectRes`. This avoids reparsing when a backend builder already
 uses `readEffectAnalysis`.
+
+`enumerateUniqueEffectBodies(effectRes)` inspects version-15 source records and
+bytes without decoding. It returns first-occurrence-ordered groups containing
+one canonical `permutationIndex`/`sourceRecord` plus every byte-identical
+variant alias. Exact range aliases are a fast path; distinct ranges are
+fingerprinted and then compared byte-for-byte. The inventory caps the
+Cartesian body table at 65,536 records, rejects partial overlaps, and leaves
+the effect cache and state-manager registries unchanged.
 
 ## Contract
 
@@ -95,8 +108,11 @@ the latter; it cannot change the portable source prefix.
 ## Selection and completeness
 
 `GetShaderByIndex(index)` and the portable serializer bypass global and local
-option selection. This makes a body-table index stable even when an application
-has global effect options.
+option selection. The portable serializer also performs a fresh non-caching
+decode with a temporary state manager, so mutation of a previously cached raw
+shader cannot change reflection rebuilt from the same owned source bytes.
+This makes a body-table index stable even when an application has global
+effect options.
 
 Version 1 describes one complete listed body. Body-local technique, pass,
 stage, and library keys must be namespaced by a backend package before they are

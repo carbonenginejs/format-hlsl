@@ -31,8 +31,10 @@ an effect description is available.
 
 The returned raw effect resource also has `GetShaderByIndex(index)`. It decodes
 one exact permutation-table slot without applying global or local option
-overrides. Use the versioned portable subpath when the result must cross a package
-or serialization boundary.
+overrides. Use the versioned portable subpath when the result must cross a
+package or serialization boundary. Its `enumerateUniqueEffectBodies(effectRes)`
+helper inventories first-seen raw body identities without populating the
+mutable shader cache.
 
 ## `Tr2EffectBindingManifest`
 

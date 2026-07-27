@@ -19,7 +19,8 @@ Additional named exports intended for advanced tooling are documented
 separately in [advanced-analysis.md](advanced-analysis.md).
 
 The versioned `@carbonenginejs/format-hlsl/portable` subpath exposes exact
-version-15 body-index reflection for backend packagers. See
+version-15 body-index reflection plus first-seen exact-byte unique-body
+enumeration for backend packagers. See
 [portable-reflection.md](portable-reflection.md).
 
 ## Constructor

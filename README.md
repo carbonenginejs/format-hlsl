@@ -35,21 +35,31 @@ const effect = CjsFormatHlsl.read(bytes, {
 });
 ```
 
-Backend effect packagers that need complete source reflection for one exact
-version-15 body can use the versioned portable subpath:
+Backend effect packagers that need complete source reflection for exact
+version-15 bodies can use the versioned portable subpath:
 
 ```js
 import {
+    buildEffectBodyReflection,
+    enumerateUniqueEffectBodies,
     readEffectBodyReflection
 } from "@carbonenginejs/format-hlsl/portable";
 
 const reflection = readEffectBodyReflection(bytes, {
     permutationIndex: 0
 });
+
+const effectRes = CjsFormatHlsl.read(bytes, {
+    emit: CjsFormatHlsl.OUTPUT_RAW
+});
+const allUniqueBodies = enumerateUniqueEffectBodies(effectRes).map((body) =>
+    buildEffectBodyReflection(effectRes, body.permutationIndex));
 ```
 
 This contract owns copies of authored constant-default and source-program
-bytes. It excludes renderer handles and other realized state.
+bytes. The inventory groups exact raw aliases before decoding, and portable
+builds always decode afresh from the owned source rather than trusting mutable
+parser caches. It excludes renderer handles and other realized state.
 
 Node callers can also use `CjsFormatHlsl.readFile(path)` or the included CLI:
 
