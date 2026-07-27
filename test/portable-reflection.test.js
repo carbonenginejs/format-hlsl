@@ -367,6 +367,58 @@ test("portable one-shot selection and validator fail closed", () =>
         () => validateEffectBodyReflection(withMapMismatch),
         /resource.*map disagrees with its signature/u
     );
+    const withUnboundedHeapView = structuredClone(reflection);
+    const unboundedInput = withUnboundedHeapView.effect.techniques[0]
+        .passes[0].stages[0].input;
+    unboundedInput.resources.push({
+        registerIndex: 7,
+        name: "HeapView_Texture2D",
+        type: 2,
+        arrayElements: 0,
+        isSRGB: false,
+        isAutoregister: false
+    });
+    unboundedInput.resourceCount += 1;
+    unboundedInput.signature.registers.push({
+        registerType: 36,
+        registerIndex: 7,
+        arrayCount: 0,
+        registerCount: 0,
+        registerSpace: 1
+    });
+    unboundedInput.signature.registerCount += 1;
+    assert.doesNotThrow(
+        () => validateEffectBodyReflection(withUnboundedHeapView)
+    );
+    const withHalfUnboundedRegister = structuredClone(withUnboundedHeapView);
+    withHalfUnboundedRegister.effect.techniques[0].passes[0].stages[0]
+        .input.signature.registers.at(-1).registerCount = 1;
+    assert.throws(
+        () => validateEffectBodyReflection(withHalfUnboundedRegister),
+        /register .* is malformed/u
+    );
+    const withUnboundedConstantBuffer = structuredClone(withUnboundedHeapView);
+    withUnboundedConstantBuffer.effect.techniques[0].passes[0].stages[0]
+        .input.signature.registers.at(-1).registerType = 0;
+    assert.throws(
+        () => validateEffectBodyReflection(withUnboundedConstantBuffer),
+        /register .* is malformed/u
+    );
+    const withBindingAfterUnbounded = structuredClone(withUnboundedHeapView);
+    const afterUnboundedInput = withBindingAfterUnbounded.effect.techniques[0]
+        .passes[0].stages[0].input;
+    afterUnboundedInput.signature.registers.push({
+        registerType: 36,
+        registerIndex: 8,
+        arrayCount: 1,
+        registerCount: 1,
+        registerSpace: 1
+    });
+    afterUnboundedInput.signature.registerCount += 1;
+    assert.throws(
+        () => validateEffectBodyReflection(withBindingAfterUnbounded),
+        /signature register range overlaps/u
+    );
     const withInvalidProgramOffset = structuredClone(reflection);
     withInvalidProgramOffset.effect.techniques[0].passes[0].stages[0]
         .sourceProgram.stringTableOffset =

@@ -915,8 +915,7 @@ function validateResourceList(entries, context)
         }
         assertUint8(entry.type, `${context} type`);
         assertUint(entry.arrayElements, `${context} arrayElements`);
-        if (entry.arrayElements < 1
-            || typeof entry.isSRGB !== "boolean"
+        if (typeof entry.isSRGB !== "boolean"
             || typeof entry.isAutoregister !== "boolean")
         {
             throw new Error(`Portable reflection ${context} entry is malformed`);
@@ -997,14 +996,22 @@ function validateSignature(signature, context)
         assertUint(register.arrayCount, `${context} register ${index} arrayCount`);
         assertUint(register.registerCount, `${context} register ${index} registerCount`);
         assertUint8(register.registerSpace, `${context} register ${index} space`);
-        const rangeEnd = register.registerIndex + register.registerCount;
-        if (register.arrayCount < 1
-            || register.registerCount !== register.arrayCount
+        const classification = registerClass(register.registerType);
+        const isUnbounded = register.arrayCount === 0
+            && register.registerCount === 0;
+        const rangeEnd = isUnbounded
+            ? UINT32_MAX + 1
+            : register.registerIndex + register.registerCount;
+        if (register.registerCount !== register.arrayCount
+            || (isUnbounded
+                && classification !== "sampler"
+                && classification !== "resource"
+                && classification !== "uav")
             || rangeEnd > UINT32_MAX + 1)
         {
             throw new Error(`Portable reflection ${context} register ${index} is malformed`);
         }
-        const rangeKey = `${registerClass(register.registerType)}:${register.registerSpace}`;
+        const rangeKey = `${classification}:${register.registerSpace}`;
         const ranges = registerRanges.get(rangeKey) || [];
         if (ranges.some(([ start, end ]) =>
             register.registerIndex < end && rangeEnd > start))
@@ -1072,6 +1079,7 @@ function validateMapSignatureReconciliation(input, context)
         if (matches.length > 1
             || (matches.length === 1
                 && sampler.isDynamic
+                && matches[0].arrayCount !== 0
                 && matches[0].arrayCount !== 1))
         {
             throw new Error(
