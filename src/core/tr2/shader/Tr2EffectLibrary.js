@@ -22,6 +22,7 @@ export class Tr2EffectLibrary
         this.globalInput = new Tr2EffectStageInput();
         this.localInput = new Tr2EffectStageInput();
         this.globalResourceSetDesc = null;
+        this.cjsShaderBytecode = null;
     }
 
     /**

@@ -29,6 +29,11 @@ The result contains the loaded effect resource, resolved shader, selected
 option and body-index data, effect description, and a binding manifest when
 an effect description is available.
 
+The returned raw effect resource also has `GetShaderByIndex(index)`. It decodes
+one exact permutation-table slot without applying global or local option
+overrides. Use the versioned portable subpath when the result must cross a package
+or serialization boundary.
+
 ## `Tr2EffectBindingManifest`
 
 `Tr2EffectBindingManifest` is an exported advanced class that derives
@@ -51,3 +56,7 @@ analysis.bindingManifest instanceof Tr2EffectBindingManifest;
 constants. `tr2ShaderStageName(value)` maps a known stage value to its
 readable name. Both are advanced compatibility helpers rather than a stable
 cross-package enumeration contract.
+
+## Related documentation
+
+- [Portable body reflection](portable-reflection.md)

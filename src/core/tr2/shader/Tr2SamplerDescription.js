@@ -16,11 +16,15 @@ export class Tr2SamplerDescription
         this.addressV = 0;
         this.addressW = 0;
         this.mipLODBias = 0;
+        this.mipLODBiasRaw = 0;
         this.maxAnisotropy = 0;
         this.comparisonFunc = 0;
         this.borderColor = [ 0, 0, 0, 0 ];
+        this.borderColorRaw = [ 0, 0, 0, 0 ];
         this.minLOD = 0;
+        this.minLODRaw = 0;
         this.maxLOD = 0;
+        this.maxLODRaw = 0;
         this.isDynamic = true;
     }
 
@@ -32,8 +36,20 @@ export class Tr2SamplerDescription
     toJSON() 
     {
         return {
-            ...this,
-            borderColor: this.borderColor.slice()
+            comparison: this.comparison,
+            minFilter: this.minFilter,
+            magFilter: this.magFilter,
+            mipFilter: this.mipFilter,
+            addressU: this.addressU,
+            addressV: this.addressV,
+            addressW: this.addressW,
+            mipLODBias: this.mipLODBias,
+            maxAnisotropy: this.maxAnisotropy,
+            comparisonFunc: this.comparisonFunc,
+            borderColor: this.borderColor.slice(),
+            minLOD: this.minLOD,
+            maxLOD: this.maxLOD,
+            isDynamic: this.isDynamic
         };
     }
 }

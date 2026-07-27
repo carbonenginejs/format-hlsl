@@ -19,6 +19,8 @@ export class Tr2EffectStageInput
         this.constants = [];
         this.m_constantValueSize = 0;
         this.constantValues = new Uint8Array(0);
+        this.sourceConstantValueSize = 0;
+        this.sourceConstantValues = new Uint8Array(0);
         this.signature = {
             pipelineInputs: [],
             registers: [],

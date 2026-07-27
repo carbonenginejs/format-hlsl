@@ -39,6 +39,9 @@ They support the reader but are not independent package entry points.
   planning.
 - `raw` exposes internal effect-model instances for advanced tooling and is
   not a stable schema.
+- `@carbonenginejs/format-hlsl/portable` copies one exact body into a versioned,
+  runtime-neutral source-reflection contract. Authored defaults and programs stay
+  separate from mutable renderer realization.
 
 The graph shapes are documented in
 [reference/json-graph.md](reference/json-graph.md).

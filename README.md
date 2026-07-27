@@ -35,6 +35,22 @@ const effect = CjsFormatHlsl.read(bytes, {
 });
 ```
 
+Backend effect packagers that need complete source reflection for one exact
+version-15 body can use the versioned portable subpath:
+
+```js
+import {
+    readEffectBodyReflection
+} from "@carbonenginejs/format-hlsl/portable";
+
+const reflection = readEffectBodyReflection(bytes, {
+    permutationIndex: 0
+});
+```
+
+This contract owns copies of authored constant-default and source-program
+bytes. It excludes renderer handles and other realized state.
+
 Node callers can also use `CjsFormatHlsl.readFile(path)` or the included CLI:
 
 ```sh
@@ -48,6 +64,7 @@ format-hlsl metadata effect.sm_hi effect.json
 - [Reading effects](docs/guides/reading-effects.md)
 - [API reference](docs/reference/api.md)
 - [JSON graph reference](docs/reference/json-graph.md)
+- [Portable body reflection](docs/reference/portable-reflection.md)
 
 ## License
 

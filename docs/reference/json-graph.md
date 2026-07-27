@@ -78,6 +78,12 @@ types can also include readable or typed fields such as `name`, `valueName`,
 callers to resolve multiple permutations after one parse, but it is not a
 stable or serialization-safe schema.
 
+Raw stage and library inputs retain authored `sourceConstantValueSize` /
+`sourceConstantValues` separately from Carbon-compatible mutable constant
+buffers. Libraries retain their source `cjsShaderBytecode` directly. Use
+`@carbonenginejs/format-hlsl/portable` to copy those facts into a validated
+handle-free contract.
+
 ## Compatibility and failures
 
 The reader supports compiled effect versions 8 through 15. The root or
@@ -89,4 +95,5 @@ rather than being filled with guessed values.
 
 - [API reference](api.md)
 - [Advanced analysis exports](advanced-analysis.md)
+- [Portable body reflection](portable-reflection.md)
 - [Reading effects](../guides/reading-effects.md)

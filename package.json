@@ -1,6 +1,6 @@
 {
   "name": "@carbonenginejs/format-hlsl",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Pure-JavaScript reader for Carbon/Trinity compiled effect containers.",
   "type": "module",
   "main": "src/index.js",
@@ -8,7 +8,8 @@
     "format-hlsl": "./bin/format-hlsl.js"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./portable": "./src/portable.js"
   },
   "engines": {
     "node": ">=18"

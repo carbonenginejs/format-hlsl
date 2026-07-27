@@ -108,6 +108,10 @@ export class Tr2EffectDescription
             for (let parameterIndex = 0; parameterIndex < parameterCount; parameterIndex += 1) 
             {
                 const name = stream.readString();
+                if (this.annotations.has(name))
+                {
+                    throw new Error(`Duplicate effect parameter annotation group ${name}`);
+                }
                 this.annotations.set(name, readAnnotations(stream));
             }
 
@@ -184,6 +188,11 @@ function readPass(stream, version, effectName, context)
     for (let stageIndex = 0; stageIndex < stageCount; stageIndex += 1) 
     {
         const stageType = stream.readUint8();
+        if (stageType >= Tr2RenderContextEnum.SHADER_TYPE_COUNT
+            || pass.stageInputs[stageType]?.m_exists)
+        {
+            throw new Error(`Duplicate or invalid shader stage type ${stageType}`);
+        }
         const stageInput = pass.stageInputs[stageType] || new Tr2EffectStageInput();
         pass.stageInputs[stageType] = stageInput;
         pass.shaderTypeMask |= 1 << stageType;
@@ -267,7 +276,13 @@ function readPass(stream, version, effectName, context)
     const states = new Map();
     for (let stateIndex = 0; stateIndex < stateCount; stateIndex += 1) 
     {
-        states.set(stream.readUint32(), stream.readUint32());
+        const state = stream.readUint32();
+        const value = stream.readUint32();
+        if (states.has(state))
+        {
+            throw new Error(`Duplicate render state ${state}`);
+        }
+        states.set(state, value);
     }
     pass.cjsRenderStateSetup = new CjsRenderStateSetup(states);
     pass.renderStates = context.effectStateManager.RegisterRenderStateSetup(pass.cjsRenderStateSetup);
@@ -289,13 +304,16 @@ function readLibrary(stream, version, context)
     library.payloadSize = stream.readUint32();
     const bytecodeSize = stream.readUint32();
     const bytecodeBlob = stream.readTableBlob(bytecodeSize);
-    library.libraryHandle = context.effectStateManager.RegisterShaderLibrary(new CjsShaderBytecode({
+    library.cjsShaderBytecode = new CjsShaderBytecode({
         stageType: Tr2RenderContextEnum.COMPUTE_SHADER,
         stageName: "library",
         bytes: bytecodeBlob.bytes,
         shaderSize: bytecodeSize,
         stringTableOffset: bytecodeBlob.offset
-    }));
+    });
+    library.libraryHandle = context.effectStateManager.RegisterShaderLibrary(
+        library.cjsShaderBytecode
+    );
 
     const exportCount = stream.readUint32();
     for (let exportIndex = 0; exportIndex < exportCount; exportIndex += 1) 
@@ -345,24 +363,36 @@ function readInput(input, stream, version, stageType, context)
     }
 
     const constantValueSize = stream.readUint32();
-    input.m_constantValueSize = Math.min(constantValueSize, Tr2EffectStageInput.SHADER_CONSTANTS_MAX);
+    input.sourceConstantValueSize = constantValueSize;
+    let sourceConstantValues;
     if (version < 5) 
     {
-        input.constantValues = constantValueSize
-            ? stream.readRaw(constantValueSize).subarray(0, input.m_constantValueSize)
+        sourceConstantValues = constantValueSize
+            ? stream.readRaw(constantValueSize)
             : new Uint8Array(0);
     }
     else 
     {
         const blob = stream.readTableBlobOptional(constantValueSize);
-        input.constantValues = blob.bytes.subarray(0, input.m_constantValueSize);
+        sourceConstantValues = blob.bytes;
     }
+    input.sourceConstantValues = Uint8Array.from(sourceConstantValues);
+    input.m_constantValueSize = Math.min(
+        constantValueSize,
+        Tr2EffectStageInput.SHADER_CONSTANTS_MAX
+    );
+    input.constantValues = input.sourceConstantValues.slice(0, input.m_constantValueSize);
 
     const textureCount = sanityCheck(stream.readUint8(), 64, "texture count");
     input.resources = new Map();
     for (let textureIndex = 0; textureIndex < textureCount; textureIndex += 1) 
     {
-        input.resources.set(stream.readUint8(), readResource(stream, version));
+        const registerIndex = stream.readUint8();
+        if (input.resources.has(registerIndex))
+        {
+            throw new Error(`Duplicate resource register ${registerIndex}`);
+        }
+        input.resources.set(registerIndex, readResource(stream, version));
     }
 
     const samplerCount = sanityCheck(stream.readUint8(), 64, "sampler count");
@@ -385,6 +415,10 @@ function readInput(input, stream, version, stageType, context)
                 samplerSetup.name = null;
             }
         }
+        if (input.samplers.has(registerIndex))
+        {
+            throw new Error(`Duplicate sampler register ${registerIndex}`);
+        }
         input.samplers.set(registerIndex, samplerSetup);
     }
 
@@ -401,6 +435,10 @@ function readInput(input, stream, version, stageType, context)
             resource.type = stream.readUint8();
             resource.arrayElements = version >= 13 ? stream.readUint32() : 1;
             resource.isAutoregister = stream.readBool();
+            if (input.uavs.has(registerIndex))
+            {
+                throw new Error(`Duplicate UAV register ${registerIndex}`);
+            }
             input.uavs.set(registerIndex, resource);
         }
 
@@ -514,17 +552,20 @@ function readSampler(stream)
     sampler.addressU = stream.readUint8();
     sampler.addressV = stream.readUint8();
     sampler.addressW = stream.readUint8();
-    sampler.mipLODBias = stream.readFloat32();
+    const mipLODBias = readFloat32WithBits(stream);
+    sampler.mipLODBias = mipLODBias.value;
+    sampler.mipLODBiasRaw = mipLODBias.rawValue;
     sampler.maxAnisotropy = stream.readUint8();
     sampler.comparisonFunc = stream.readUint8();
-    sampler.borderColor = [
-        stream.readFloat32(),
-        stream.readFloat32(),
-        stream.readFloat32(),
-        stream.readFloat32()
-    ];
-    sampler.minLOD = stream.readFloat32();
-    sampler.maxLOD = stream.readFloat32();
+    const borderColor = Array.from({ length: 4 }, () => readFloat32WithBits(stream));
+    sampler.borderColor = borderColor.map((entry) => entry.value);
+    sampler.borderColorRaw = borderColor.map((entry) => entry.rawValue);
+    const minLOD = readFloat32WithBits(stream);
+    sampler.minLOD = minLOD.value;
+    sampler.minLODRaw = minLOD.rawValue;
+    const maxLOD = readFloat32WithBits(stream);
+    sampler.maxLOD = maxLOD.value;
+    sampler.maxLODRaw = maxLOD.rawValue;
     return sampler;
 }
 
@@ -628,7 +669,7 @@ function readRegisters(signature, stream, version, stageType, context)
  */
 function readStaticSampler(stream) 
 {
-    return {
+    const record = {
         registerIndex: stream.readUint32(),
         registerSpace: stream.readUint8(),
         sampler: {
@@ -639,13 +680,46 @@ function readStaticSampler(stream)
             addressU: stream.readUint8(),
             addressV: stream.readUint8(),
             addressW: stream.readUint8(),
-            mipLODBias: stream.readFloat32(),
-            maxAnisotropy: stream.readUint8(),
-            comparisonFunc: stream.readUint8(),
-            borderColor: stream.readUint8(),
-            minLOD: stream.readFloat32(),
-            maxLOD: stream.readFloat32()
+            mipLODBias: 0,
+            maxAnisotropy: 0,
+            comparisonFunc: 0,
+            borderColor: 0,
+            minLOD: 0,
+            maxLOD: 0
         }
+    };
+    Object.defineProperties(record.sampler, {
+        mipLODBiasRaw: { value: 0, writable: true },
+        minLODRaw: { value: 0, writable: true },
+        maxLODRaw: { value: 0, writable: true }
+    });
+    const mipLODBias = readFloat32WithBits(stream);
+    record.sampler.mipLODBias = mipLODBias.value;
+    record.sampler.mipLODBiasRaw = mipLODBias.rawValue;
+    record.sampler.maxAnisotropy = stream.readUint8();
+    record.sampler.comparisonFunc = stream.readUint8();
+    record.sampler.borderColor = stream.readUint8();
+    const minLOD = readFloat32WithBits(stream);
+    record.sampler.minLOD = minLOD.value;
+    record.sampler.minLODRaw = minLOD.rawValue;
+    const maxLOD = readFloat32WithBits(stream);
+    record.sampler.maxLOD = maxLOD.value;
+    record.sampler.maxLODRaw = maxLOD.rawValue;
+    return record;
+}
+
+/**
+ * Reads one float while preserving its exact serialized IEEE-754 bits.
+ *
+ * @param {CjsBinaryReader} stream Binary reader positioned at a float.
+ * @returns {{value:number,rawValue:number}} Decoded value and raw uint32 bits.
+ */
+function readFloat32WithBits(stream)
+{
+    const rawValue = stream.readUint32();
+    return {
+        value: cjsUint32ToFloat32(rawValue),
+        rawValue
     };
 }
 

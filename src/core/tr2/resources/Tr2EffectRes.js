@@ -53,7 +53,9 @@ export class Tr2EffectRes
 
         try 
         {
-            this.m_data = cjsNormalizeBytes(source);
+            // Carbon owns a memcpy of the loaded resource. Keep the JS graph
+            // equally isolated from later caller mutation.
+            this.m_data = Uint8Array.from(cjsNormalizeBytes(source));
             const stream = new CjsBinaryReader(this.m_data, { source: this.sourcePath || "Tr2EffectRes" });
             this.m_version = stream.readUint32();
 
@@ -176,13 +178,33 @@ export class Tr2EffectRes
             multiplier *= permutation.options.length || 1;
         }
 
-        if (this.m_shaders.has(index)) 
+        return this.GetShaderByIndex(index);
+    }
+
+    /**
+   * Decodes the body at an exact permutation-table index without applying
+   * global or local option overrides.
+   *
+   * @param {number} index Exact zero-based permutation-table index.
+   * @returns {Tr2Shader|null} Decoded shader or null when the index/body is unavailable.
+   */
+    GetShaderByIndex(index)
+    {
+        if (!Number.isSafeInteger(index) || index < 0)
+        {
+            throw new TypeError("Tr2EffectRes body index must be a non-negative safe integer");
+        }
+        if (!this.IsGood())
+        {
+            return null;
+        }
+        if (this.m_shaders.has(index))
         {
             return this.m_shaders.get(index);
         }
 
         const offset = this.m_offsets[index];
-        if (!offset) 
+        if (!offset)
         {
             return null;
         }
@@ -198,7 +220,7 @@ export class Tr2EffectRes
             this.sourcePath,
             { effectStateManager: this.effectStateManager }
         );
-        if (!ok) 
+        if (!ok)
         {
             return null;
         }

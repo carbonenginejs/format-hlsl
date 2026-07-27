@@ -39,6 +39,7 @@ provide a rendering runtime.
 - [API reference](reference/api.md)
 - [Advanced analysis exports](reference/advanced-analysis.md)
 - [JSON graph reference](reference/json-graph.md)
+- [Portable body reflection](reference/portable-reflection.md)
 - [Class catalog](reference/classes/README.md)
 
 ## Compatibility

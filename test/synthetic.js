@@ -26,6 +26,13 @@ class ByteWriter
         return this._push(Uint8Array.of(value & 0xff));
     }
 
+    u16(value)
+    {
+        const bytes = new Uint8Array(2);
+        new DataView(bytes.buffer).setUint16(0, value >>> 0, true);
+        return this._push(bytes);
+    }
+
     u32(value)
     {
         const bytes = new Uint8Array(4);
@@ -153,5 +160,105 @@ export function buildEffectBytes(options = {})
         writer.raw(body.bytes || new Uint8Array(size));
     }
 
+    return writer.toBytes();
+}
+
+/**
+ * Builds a compact v15 effect with one reflected stage and one shader library.
+ *
+ * The two permutation records contain the same body bytes at distinct source
+ * ranges. The stage's authored four-byte default prefix is deliberately
+ * shorter than a UINT sampler-index constant at bytes 8..11 so parser
+ * realization extends only the compatibility buffer.
+ *
+ * @returns {Uint8Array} Synthetic effect bytes for portable-reflection tests.
+ */
+export function buildPortableReflectionEffectBytes()
+{
+    const strings = [
+        "AXIS", "", "A", "B", "Main", "SamplerHeap", "StageFlag",
+        "RayGen", "Enabled", "Count", "Weight", "Label", "hello"
+    ];
+    const table = buildStringTable(strings);
+    const tableWriter = new ByteWriter();
+    tableWriter.raw(table.bytes);
+    const shaderOffset = tableWriter.length;
+    tableWriter.raw(Uint8Array.of(0x44, 0x58, 0x42, 0x43));
+    const defaultsOffset = tableWriter.length;
+    tableWriter.raw(Uint8Array.of(1, 2, 3, 4));
+    const libraryOffset = tableWriter.length;
+    tableWriter.raw(Uint8Array.of(9, 8, 7, 6));
+    const tableBytes = tableWriter.toBytes();
+
+    const body = new ByteWriter();
+    body.u8(1);
+    body.u32(table.offsets.get("Main"));
+    body.u8(1);
+    body.u8(1);
+    body.u8(0);
+    body.u32(4);
+    body.u32(shaderOffset);
+    body.u32(1).u32(2).u32(3);
+    body.u8(1);
+    body.u8(0).u8(0).u8(0).u8(0x0f).u8(0).u8(3);
+    body.u8(1);
+    body.u8(0).u32(0).u32(1).u8(0);
+    body.u8(1);
+    body.u32(0).u8(0);
+    body.u8(0).u8(1).u8(1).u8(1).u8(1).u8(1).u8(1);
+    body.u32(0x80000000).u8(4).u8(2).u8(3);
+    body.u32(0).u32(0x3f800000);
+    body.u32(1);
+    body.u32(table.offsets.get("SamplerHeap"));
+    body.u32(8).u32(4).u8(2).u8(1).u32(1).u8(0).u8(0);
+    body.u32(4).u32(defaultsOffset);
+    body.u8(0);
+    body.u8(1);
+    body.u8(0).u32(table.offsets.get("SamplerHeap"));
+    body.u8(0).u8(1).u8(1).u8(1).u8(1).u8(1).u8(1);
+    body.u32(0x80000000).u8(4).u8(2);
+    body.u32(0).u32(0x3f800000).u32(0x40000000).u32(0x40400000);
+    body.u32(0).u32(0x7f800000);
+    body.u8(1);
+    body.u8(0);
+    body.u8(1);
+    body.u32(table.offsets.get("StageFlag")).u8(2).u32(0x7fc01234);
+    body.u8(2);
+    body.u32(22).u32(3);
+    body.u32(175).u32(0x3f800000);
+    body.u8(1);
+    body.u32(8).u32(4).u32(libraryOffset);
+    body.u32(1).u8(0).u32(table.offsets.get("RayGen"));
+    body.u32(table.offsets.get(""));
+    for (let inputIndex = 0; inputIndex < 2; inputIndex += 1)
+    {
+        body.u8(0).u8(0);
+        body.u32(0).u32(0).u32(0);
+        body.u8(0).u8(0).u8(0).u8(0);
+    }
+    body.u16(1);
+    body.u32(table.offsets.get("SamplerHeap"));
+    body.u8(4);
+    body.u32(table.offsets.get("Enabled")).u8(0).u32(1);
+    body.u32(table.offsets.get("Count")).u8(1).u32(0xffffffff);
+    body.u32(table.offsets.get("Weight")).u8(2).u32(0x7fc01234);
+    body.u32(table.offsets.get("Label")).u8(3).u32(table.offsets.get("hello"));
+    const bodyBytes = body.toBytes();
+
+    const writer = new ByteWriter();
+    writer.u32(15).u32(77);
+    writer.raw(Uint8Array.from({ length: 32 }, (_, index) => index));
+    writer.u32(tableBytes.length).raw(tableBytes);
+    writer.u8(1);
+    writer.u32(table.offsets.get("AXIS")).u8(0);
+    writer.u32(table.offsets.get("")).u8(0).u8(2);
+    writer.u32(table.offsets.get("A")).u32(table.offsets.get("B"));
+
+    const offsetTableSize = 4 + 2 * 12;
+    const bodyOffset = writer.length + offsetTableSize;
+    writer.u32(2);
+    writer.u32(0).u32(bodyOffset).u32(bodyBytes.length);
+    writer.u32(1).u32(bodyOffset + bodyBytes.length).u32(bodyBytes.length);
+    writer.raw(bodyBytes).raw(bodyBytes);
     return writer.toBytes();
 }
