@@ -89,7 +89,8 @@ Version-15 resource and signature counts retain Carbon's authored zero value.
 For heap-view/bindless SRV, UAV, and sampler bindings, `arrayElements: 0` and
 the matching signature `arrayCount: 0` / `registerCount: 0` represent an
 unbounded descriptor range; they are valid source reflection, not an empty or
-malformed binding.
+malformed binding. Every resource and UAV map entry must reconcile with
+exactly one signature register; signature-only records remain valid.
 
 The compiled body has no authored effect-name field. The caller-supplied
 diagnostic name or path is retained only as `source.label`.

@@ -1095,9 +1095,8 @@ function validateMappedBindings(entries, registers, context)
     {
         const matches = registers.filter((register) =>
             register.registerIndex === entry.registerIndex);
-        if (matches.length > 1
-            || (matches.length === 1
-                && matches[0].arrayCount !== entry.arrayElements))
+        if (matches.length !== 1
+            || matches[0].arrayCount !== entry.arrayElements)
         {
             throw new Error(
                 `Portable reflection ${context} map disagrees with its signature`

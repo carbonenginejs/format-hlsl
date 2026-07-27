@@ -390,6 +390,15 @@ test("portable one-shot selection and validator fail closed", () =>
     assert.doesNotThrow(
         () => validateEffectBodyReflection(withUnboundedHeapView)
     );
+    const withMapWithoutSignature = structuredClone(withUnboundedHeapView);
+    const missingSignature = withMapWithoutSignature.effect.techniques[0]
+        .passes[0].stages[0].input.signature;
+    missingSignature.registers.pop();
+    missingSignature.registerCount -= 1;
+    assert.throws(
+        () => validateEffectBodyReflection(withMapWithoutSignature),
+        /resource.*map disagrees with its signature/u
+    );
     const withHalfUnboundedRegister = structuredClone(withUnboundedHeapView);
     withHalfUnboundedRegister.effect.techniques[0].passes[0].stages[0]
         .input.signature.registers.at(-1).registerCount = 1;
