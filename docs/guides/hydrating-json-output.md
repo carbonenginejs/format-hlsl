@@ -54,3 +54,9 @@ Hydration changes object prototypes, not the documented field shape. Nested
 records without a class key remain plain JSON-compatible data. Depending on
 the caller's constructors as a serialization schema is discouraged; persist
 the documented graph fields instead.
+
+This feature is caller-selected JSON projection only. It does not consume the
+versioned portable-reflection contract and does not construct canonical
+runtime `Tr2EffectRes` or `Tr2Shader` instances. Canonical
+`CJS_EFFECT_BODY_REFLECTION` hydration belongs to
+`@carbonenginejs/runtime-resource`.

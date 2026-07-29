@@ -29,7 +29,8 @@ caller bytes
 
 `src/CjsFormatHlsl.js` is the supported reader boundary. Binary utilities and
 format-shaped compatibility models live below `src/core` and `src/carbon`.
-They support the reader but are not independent package entry points.
+Their same-named `Tr2*` classes are internal parser DTOs, not canonical runtime
+model identity, and are not independent package entry points.
 
 ## Output modes
 
@@ -42,6 +43,11 @@ They support the reader but are not independent package entry points.
 - `@carbonenginejs/format-hlsl/portable` copies one exact body into a versioned,
   runtime-neutral source-reflection contract. Authored defaults and programs stay
   separate from mutable renderer realization.
+
+`runtime-resource` owns canonical `Tr2EffectRes`/`Tr2Shader` hydration,
+permutation selection, and caching. `runtime-trinity` owns the mutable
+effect/material facade, parameters, authored options, and sampler overrides.
+Engines own GPU realization.
 
 The graph shapes are documented in
 [reference/json-graph.md](reference/json-graph.md).

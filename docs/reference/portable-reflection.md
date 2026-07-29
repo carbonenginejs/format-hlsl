@@ -102,8 +102,10 @@ stage constant-buffer limit.
 
 The portable document excludes shader, program, render-state, sampler, and
 library handles. It also excludes resource-set descriptions, heap-view arrays,
-backend layouts, masks, sort values, and caches. Those are engine-owned
-realization or deterministic derived state.
+backend layouts, masks, sort values, and caches. `runtime-resource` consumes
+the document to hydrate the canonical device-free shader/reflection graph,
+select permutations, and cache shaders. Engines own handles, layouts,
+resource sets, programs, pipelines, and other GPU realization.
 
 Register dynamic classification is not persisted. It depends on per-frame
 reader/engine policy and is not an authored binary field.
@@ -114,10 +116,12 @@ the latter; it cannot change the portable source prefix.
 
 ## Selection and completeness
 
-`GetShaderByIndex(index)` and the portable serializer bypass global and local
-option selection. The portable serializer also performs a fresh non-caching
-decode with a temporary state manager, so mutation of a previously cached raw
-shader cannot change reflection rebuilt from the same owned source bytes.
+The parser-internal `GetShaderByIndex(index)` and the portable serializer
+bypass global and local option selection. This is distinct from
+`runtime-resource` `Tr2EffectRes.GetShaderByIndex`, which hydrates and caches a
+canonical shader. The portable serializer performs a fresh non-caching decode
+with a temporary state manager, so mutation of a previously cached raw shader
+cannot change reflection rebuilt from the same owned source bytes.
 This makes a body-table index stable even when an application has global
 effect options.
 

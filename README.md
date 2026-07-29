@@ -61,6 +61,12 @@ bytes. The inventory groups exact raw aliases before decoding, and portable
 builds always decode afresh from the owned source rather than trusting mutable
 parser caches. It excludes renderer handles and other realized state.
 
+The same-named `Tr2*` types used internally by this package are parser DTOs,
+not canonical runtime classes. `@carbonenginejs/runtime-resource` owns
+`Tr2EffectRes`, canonical device-free `Tr2Shader` reflection hydration,
+selection, and caching; `@carbonenginejs/runtime-trinity` owns the mutable
+effect/material facade, parameters, authored options, and sampler overrides.
+
 Node callers can also use `CjsFormatHlsl.readFile(path)` or the included CLI:
 
 ```sh

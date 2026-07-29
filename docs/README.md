@@ -27,9 +27,13 @@ const metadata = CjsFormatHlsl.read(bytes, {
   shader bytecode.
 - Translation backends such as `@carbonenginejs/format-webgpu` can consume
   the metadata and bytecode through their own integration layers.
+- `@carbonenginejs/runtime-resource` consumes packaged portable reflection and
+  owns canonical `Tr2EffectRes`/`Tr2Shader` hydration, selection, and caching.
+- `@carbonenginejs/runtime-trinity` consumes that shader graph through its
+  mutable effect/material facade, parameters, options, and sampler overrides.
 
-The package does not compile HLSL source, translate shader instructions, or
-provide a rendering runtime.
+The package does not compile HLSL source, translate shader instructions,
+construct canonical runtime model instances, or provide a rendering runtime.
 
 ## Start here
 

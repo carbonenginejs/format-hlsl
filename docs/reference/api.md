@@ -39,7 +39,8 @@ Options are reusable on an instance and can be overridden per call:
 - `emit`: `"json"` (default), `"metadata"`, or advanced `"raw"` output.
 - `source`: a caller-supplied label used in diagnostics and output.
 - `permutation`: a `Map` or an array of `{ name, value }` selections.
-- `classes`: constructors used to hydrate supported JSON node kinds.
+- `classes`: constructors used for caller-selected JSON-node projection; this
+  is not canonical runtime shader hydration.
 
 ## Instance methods
 
@@ -71,8 +72,9 @@ The class exposes `OUTPUT_JSON`, `OUTPUT_METADATA`, `OUTPUT_RAW`,
 ## Output stability
 
 The `json` and `metadata` modes are the supported data contracts described in
-[json-graph.md](json-graph.md). `raw` returns internal `Tr2EffectRes` objects
-for specialized callers and may change without a major version bump.
+[json-graph.md](json-graph.md). `raw` returns internal parser-DTO
+`Tr2EffectRes` objects, not the canonical runtime-resource class, and may
+change without a major version bump.
 
 ## CLI
 

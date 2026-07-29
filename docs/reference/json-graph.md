@@ -74,9 +74,10 @@ types can also include readable or typed fields such as `name`, `valueName`,
 
 ## Raw graph
 
-`emit: "raw"` returns the internal `Tr2EffectRes` graph. It allows advanced
-callers to resolve multiple permutations after one parse, but it is not a
-stable or serialization-safe schema.
+`emit: "raw"` returns the internal parser-DTO `Tr2EffectRes` graph. It is not
+the canonical runtime-resource class. It allows advanced callers to resolve
+multiple permutations after one parse, but it is not a stable or
+serialization-safe schema.
 
 Raw stage and library inputs retain authored `sourceConstantValueSize` /
 `sourceConstantValues` separately from Carbon-compatible mutable constant

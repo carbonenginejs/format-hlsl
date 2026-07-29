@@ -3,7 +3,11 @@
 Status: Evolving
 Scope: `@carbonenginejs/format-hlsl` internal Tr2 graph
 Audience: Maintainers and automated readers
-Summary: Describes the internal resource, permutation, effect, pass, and stage metadata classes.
+Summary: Describes internal parser DTOs for resource, permutation, effect, pass, and stage metadata; these are not canonical runtime-resource classes.
+
+Every same-named `Tr2*` entry in this catalog is package-internal binary parser
+state. Canonical device-free runtime `Tr2EffectRes`, `Tr2Shader`, and reflection
+identity belong to `@carbonenginejs/runtime-resource`.
 
 <!-- class:Tr2EffectRes -->
 ## `Tr2EffectRes`
